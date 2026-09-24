@@ -11,7 +11,7 @@ marked **needs lawyer** are questions for counsel, not conclusions.*
 | Repository | `yvveslaurant/mincon`, a public fork of `atciamb/mincon` (the PyPI project links to the upstream) |
 | Tree audited | `3f48bac` (branch `claude/busy-dijkstra-ed2hnp` = `master`), 1,145 tracked files |
 | History audited | all 76 commits reachable from any ref, root `616cd5e` (2026-09-05) to `3f48bac` (2026-09-20). The session clone was shallow and was unshallowed first (`git fetch --unshallow`) |
-| Published packages audited | PyPI `mincon` 0.1.0 (2 wheels + sdist) and 0.2.0 (3 wheels + sdist): all 7 files downloaded and SHA-256-checked against PyPI. No `mincon*` crate exists on crates.io |
+| Published packages audited | PyPI `mincon` 0.1.0 (2 wheels + sdist; publication recorded in `8b970bb`) and 0.2.0 (3 wheels + sdist): all 7 files downloaded and SHA-256-checked against PyPI. No `mincon*` crate exists on crates.io |
 | MathWorks reference | public documentation pages only, read as text: the `fmincon` reference page, *Constrained Nonlinear Optimization Algorithms*, *Optimization Options Reference*, *Exit Flags and Exit Messages*, *Tolerances and Stopping Criteria*, *Lagrange Multiplier Structures* |
 
 Risk levels: **none** (no IP concern), **low** (minor, easy fix),
@@ -32,10 +32,13 @@ documents a specific mechanism (BFGS damping, per-constraint merit weights, a
 primal active-set QP), mincon implements a *different* mechanism taken from
 the literature.
 
-**One item needs a lawyer:** whether the MATLAB licence used for the
-benchmarks allows using `fmincon` to develop and benchmark a competing product
-and publishing the results (F-01). The rest are low-risk hygiene items, all
-with easy fixes. The main ones:
+**Two items need a lawyer.** The first is whether the MATLAB licence used for
+the benchmarks allows using `fmincon` to develop and benchmark a competing
+product and publishing the results (F-01). The second is not a MathWorks issue:
+the baseline code in the root commit was, by the project's own instructions,
+built in an earlier AI-model session. Its authorship and ownership are not
+recorded (F-02). The rest are low-risk hygiene items, all with easy fixes. The
+main ones:
 
 - There is no trademark or non-affiliation disclaimer, even though the package
   exports a function named `fmincon`.
@@ -48,26 +51,27 @@ with easy fixes. The main ones:
 
 | ID | Risk | Finding | Where | Suggested fix |
 |---|---|---|---|---|
-| F-01 | **needs lawyer** | 3,672 `fmincon` result records and the comparative claims built on them were produced with MATLAB R2025b (Optimization Toolbox 25.2) on a Windows laptop, under a licence type the repository never states. 10 of the 76 commits are authored from a university (`.edu`) address, so an academic or student licence is possible but not established. Whether that licence allows (a) using `fmincon` to develop and benchmark a competing product and (b) publishing the results depends on its terms | 85 files in 25 `bench/results/*` directories; `README.md:33-92`; docs 15-23 (list in §6.5) | Establish which MATLAB licence was used and have counsel read its terms on benchmarking and publication before relying on these numbers in marketing |
-| F-02 | low | **No trademark or non-affiliation disclaimer anywhere**: repo, both READMEs, PyPI metadata, all 7 PyPI files. "MathWorks" appears 0 times in the tree | whole tree + history; PyPI | Add to `README.md`, `crates/mincon-py/README.md` and the `fmincon` docstring: "MATLAB and fmincon are trademarks or registered trademarks of The MathWorks, Inc. mincon is not affiliated with, sponsored by or endorsed by The MathWorks, Inc." |
-| F-03 | low | The MathWorks names are used in the package's identity and search metadata | `crates/mincon/Cargo.toml:3` ("a free, fast, pip-installable answer to MATLAB's fmincon", also shipped in every wheel's SBOM); `crates/mincon-py/pyproject.toml:7` ("MATLAB-style interfaces"), `:12` (keyword `fmincon`); exported `mincon.fmincon` (`crates/mincon-py/python/mincon/__init__.py:44`, `:949`); `Options::fmincon_compatible` (`crates/mincon-core/src/options.rs:613`); `README.md:3`, `:17` | Nominative and interoperability use, so it is defensible, but pair it with F-02's disclaimer. Reword `crates/mincon/Cargo.toml:3` and consider dropping the `fmincon` keyword |
-| F-04 | low | Three committed MATLAB console logs contain warning stack traces that name **non-public** toolbox functions and line numbers (`fwdFinDiffInsideBnds`, `finitedifferences`, `computeFinDiffGradAndJac`, `sqpInterface`, `OptimFunctions/computeGradAndJac (line 606)`, `fmincon (line 671)`) | `bench/results/s2-dev/fmincon-sqp.A.jsonl.log:25`; `bench/results/s2-dev/fmincon-interior-point.A.jsonl.log:27`; `bench/results/s3-c1-dev/fmincon-interior-point.C.jsonl.log` | Delete these logs, or strip the stack traces. Nothing in the code reuses the names |
-| F-05 | low | The harness stores `fmincon`'s exit message verbatim in every record: 7 message templates, about 320 words, repeated across about 3,600 records | `bench/harness/worker_matlab.m:167`; `bench/friction/run_friction_matlab.m:78` | Keep `exitflag` and drop `native_message`/`message` from published records |
-| F-06 | low | `docs/20_SQP_MATHEMATICS.md` quotes short runs of the public MathWorks algorithm page (10-12 words each), in quotation marks and marked "(MW)", with URLs and a read date. §7 is an attributed paraphrase | `docs/20_SQP_MATHEMATICS.md:71`, `:246-247`, `:365`, `:577`, `:580`, `:591`; §7 `:563-603` | Acceptable as attributed quotation. Keep the quotes short |
-| F-07 | low | mincon's own messages and comments echo MathWorks wording | `crates/mincon-core/src/result.rs:71`, `:74` ("Local minimum possible. …", the opening of `fmincon`'s exit-flag-2 message); `crates/mincon-core/src/error.rs:9-10` (close paraphrase of the sqp "smaller step" sentence) | Reword the two runtime messages. Cite the MathWorks page in `error.rs` |
-| F-08 | low | Code adapted from **QDLDL** (Apache-2.0) keeps QDLDL's name but not its copyright notice. The elimination-tree loop matches `QDLDL_etree` statement for statement, and the numeric kernel borrows its structure (`lnext`, `dinv`). `LICENSE-APACHE` is a 17-line pointer, not the licence text. The Rust standard library notice is missing from the wheel's `THIRD_PARTY_LICENSES.txt` | `crates/mincon-linalg/src/ldlt.rs:241-265`, `:442-515`; `LICENSE-APACHE:1-3`; `crates/mincon-py/LICENSE-APACHE`; `crates/mincon-py/python/mincon/THIRD_PARTY_LICENSES.txt` | Add a QDLDL copyright/Apache-2.0 credit to the `ldlt.rs` header (or a NOTICE file), ship the full Apache-2.0 text, and add the Rust std notice |
-| F-09 | low | The licence rule does not cover all the code it sends readers to. `docs/20` names GPL (R `quadprog`) and LGPL (`eiquadprog`) QP codes as "reference implementations"; the rule covers EPL/LGPL but not GPL, and does not name CSparse, LDL or CHOLMOD (LGPL). `mincon-qp` shares two helper names with QuadProg++ (MIT) but is not a translation of any of them | `docs/20_SQP_MATHEMATICS.md:709`; `docs/09_RESOURCES.md:177-182`, `:76-77`; `crates/mincon-qp/src/lib.rs:547`, `:583` | Extend the rule to GPL and to the Davis LGPL codes. Add a line to `mincon-qp` saying it was written from Goldfarb & Idnani (1983) |
-| F-10 | low | `docs/09` tells readers to read IPOPT's EPL source files "for algorithm structure". No porting was found in `mincon-ip`: no IPOPT identifiers, paper notation, different restoration design | `docs/09_RESOURCES.md:165` | Keep a record of which EPL files were read, per the rule at `docs/09_RESOURCES.md:177-182` |
-| F-11 | low | Corpus problem `BADSTART_DISC` is the `fmincon` reference-page example (Rosenbrock on the unit disk) with a different start and no citation. A mathematical problem is not protectable expression | `bench/corpus/adversarial.py:83` | Cite its origin |
-| F-12 | low | The deleted `docs/01_FMINCON_ANATOMY.md` (a competitive analysis of `fmincon`) is still in public history. Its content cites public MathWorks pages and shares only the call signature with them | added `616cd5e`, untracked in `8ec00bd`, blob `31e48979` | None needed. Remove it from history only if desired |
-| F-13 | low | The root commit records a "supplied" baseline of about 2,900 lines of solver code with no earlier history, so its authorship before 2026-09-05 is not recorded in the repository. Nothing in it matches MathWorks or IPOPT text or identifiers | `616cd5e` | Have the authors record where the baseline came from and who holds the rights |
+| F-01 | **needs lawyer** | 3,672 `fmincon` result records and the comparative claims built on them were produced with MATLAB R2025b (Optimization Toolbox 25.2) on a Windows laptop, under a licence type the repository never states (no licence banner, number or type appears in any blob). 10 of the 76 commits, not including the MATLAB runs, are authored from a university (`.edu`) address, so an academic or student licence is possible but not established. The first `fmincon` run was committed in `e7c03e2`. 111 files of `fmincon` output entered history between `e7c03e2` and `7a4be10`, and all are still at HEAD. Whether that licence allows (a) using `fmincon` to develop and benchmark a competing product and (b) publishing the results depends on its terms | 85 record files (111 `fmincon` output files counting logs, progress and summaries) in 25 `bench/results/*` directories; `README.md:33-92`; docs 15-23 (list in §6.5) | Establish which MATLAB licence was used and have counsel read its terms on benchmarking and publication before relying on these numbers in marketing |
+| F-02 | **needs lawyer** | The root commit (69 files, 16,637 lines: 8 crates, the bench harness, docs and CI) is a "supplied" baseline. The deleted `AGENT_PROMPT.md`, addressed to "the model that will do the work", says "a prior session built and verified" it, so the code appears to come from an earlier AI-model session. No human author, upstream or rights record exists. This is not a MathWorks issue: nothing in the baseline matches MathWorks or IPOPT text or identifiers. But the authorship of AI-generated code, and the terms of the model provider used, bear on the project's copyright and its MIT/Apache grant | `616cd5e`; `616cd5e:AGENT_PROMPT.md:3`, `:17` | Record how the baseline was produced (tool, provider, who directed it) and have counsel confirm the project can license it as MIT OR Apache-2.0 |
+| F-03 | low | **No trademark or non-affiliation disclaimer anywhere**: repo, both READMEs, PyPI metadata, all 7 PyPI files. "MathWorks" appears 0 times in the tree | whole tree + history; PyPI | Add to `README.md`, `crates/mincon-py/README.md` and the `fmincon` docstring: "MATLAB is a registered trademark of The MathWorks, Inc.; fmincon is a function of MathWorks' Optimization Toolbox. mincon is an independent project, not affiliated with, sponsored by or endorsed by The MathWorks, Inc." |
+| F-04 | low | The MathWorks names are used in the package's identity and search metadata | `crates/mincon/Cargo.toml:3` ("a free, fast, pip-installable answer to MATLAB's fmincon", also shipped in every wheel's SBOM); `crates/mincon-py/pyproject.toml:7` ("MATLAB-style interfaces"), `:12` (keyword `fmincon`); exported `mincon.fmincon` (`crates/mincon-py/python/mincon/__init__.py:44`, `:949`); `Options::fmincon_compatible` (`crates/mincon-core/src/options.rs:613`); `README.md:3`, `:17` | Nominative and interoperability use, so it is defensible, but pair it with F-03's disclaimer. Reword `crates/mincon/Cargo.toml:3` and consider dropping the `fmincon` keyword |
+| F-05 | low | Three committed MATLAB console logs contain warning stack traces that name **non-public** toolbox functions and line numbers (`fwdFinDiffInsideBnds`, `finitedifferences`, `computeFinDiffGradAndJac`, `sqpInterface`, `barrier`, `backsolveSys`, `solveKKTsystem`, `computeTrialStep`, `OptimFunctions/computeGradAndJac (line 606)`, `fmincon (line 657/671)`). MATLAB printed them automatically. The pickaxe shows the names entered history only through these logs (`8b3f431`, `c61bc0e`) and never in code, docs or commit messages | `bench/results/s2-dev/fmincon-sqp.A.jsonl.log:25`; `bench/results/s2-dev/fmincon-interior-point.A.jsonl.log:26-29`; `bench/results/s3-c1-dev/fmincon-interior-point.C.jsonl.log:53` | Delete these logs, or strip the stack traces. Removing them from public history would need a history rewrite |
+| F-06 | low | The harness stores `fmincon`'s exit message verbatim in every record: 7 message templates, about 320 words, repeated across about 3,600 records | `bench/harness/worker_matlab.m:167`; `bench/friction/run_friction_matlab.m:78` | Keep `exitflag` and drop `native_message`/`message` from published records |
+| F-07 | low | `docs/20_SQP_MATHEMATICS.md` quotes short runs of the public MathWorks algorithm page (10-12 words each), in quotation marks and marked "(MW)", with URLs and a read date. §7 is an attributed paraphrase | `docs/20_SQP_MATHEMATICS.md:71`, `:246-247`, `:365`, `:577`, `:580`, `:591`; §7 `:563-603` | Acceptable as attributed quotation. Keep the quotes short |
+| F-08 | low | mincon's own messages and comments echo MathWorks wording | `crates/mincon-core/src/result.rs:71`, `:74` ("Local minimum possible. …", the opening of `fmincon`'s exit-flag-2 message); `crates/mincon-core/src/error.rs:9-10` (close paraphrase of the sqp "smaller step" sentence) | Reword the two runtime messages. Cite the MathWorks page in `error.rs` |
+| F-09 | low | Code adapted from **QDLDL** (Apache-2.0) keeps QDLDL's name but not its copyright notice. The elimination-tree loop matches `QDLDL_etree` statement for statement, and the numeric kernel borrows its structure (`lnext`, `dinv`). `LICENSE-APACHE` is a 17-line pointer, not the licence text. The Rust standard library notice is missing from the wheel's `THIRD_PARTY_LICENSES.txt` | `crates/mincon-linalg/src/ldlt.rs:241-265`, `:442-515`; `LICENSE-APACHE:1-3`; `crates/mincon-py/LICENSE-APACHE`; `crates/mincon-py/python/mincon/THIRD_PARTY_LICENSES.txt` | Add a QDLDL copyright/Apache-2.0 credit to the `ldlt.rs` header (or a NOTICE file), ship the full Apache-2.0 text, and add the Rust std notice |
+| F-10 | low | The licence rule does not cover all the code it sends readers to. `docs/20` names GPL (R `quadprog`) and LGPL (`eiquadprog`) QP codes as "reference implementations"; the rule covers EPL/LGPL but not GPL, and does not name CSparse, LDL or CHOLMOD (LGPL). `mincon-qp` shares two helper names with QuadProg++ (MIT) but is not a translation of any of them | `docs/20_SQP_MATHEMATICS.md:709`; `docs/09_RESOURCES.md:177-182`, `:76-77`; `crates/mincon-qp/src/lib.rs:547`, `:583` | Extend the rule to GPL and to the Davis LGPL codes. Add a line to `mincon-qp` saying it was written from Goldfarb & Idnani (1983) |
+| F-11 | low | `docs/09` tells readers to read IPOPT's EPL source files "for algorithm structure". No porting was found in `mincon-ip`: no IPOPT identifiers, paper notation, different restoration design | `docs/09_RESOURCES.md:165` | Keep a record of which EPL files were read, per the rule at `docs/09_RESOURCES.md:177-182` |
+| F-12 | low | Corpus problem `BADSTART_DISC` is the `fmincon` reference-page example (Rosenbrock on the unit disk) with a different start and no citation. A mathematical problem is not protectable expression | `bench/corpus/adversarial.py:83` | Cite its origin |
+| F-13 | low | Competitive notes deleted in `8ec00bd` are still in public history: `docs/01_FMINCON_ANATOMY.md` (a competitive analysis of `fmincon`), `docs/00_MISSION.md`, `docs/10_ROADMAP.md` ("M8 Beat `fmincon`") and the original README comparison table ("Licence: proprietary"). They were public because `605f5df` linked the repository before they were removed. The anatomy doc cites public MathWorks pages and shares only the call signature and one exit-flag phrase with them | added `616cd5e`, untracked in `8ec00bd`, blob `31e48979` | None needed. Remove it from history only if desired |
 | F-14 | low | Algorithm components with no published source cited. All are textbook-standard or the project's own heuristics; none looks MathWorks-derived | §3.2 | Add the citations listed in §3.2 |
 | F-15 | low | Inaccurate statements about `fmincon`. These are not copying, but comparative claims about a named product should be accurate | §2.4 | Correct them |
 | F-16 | low | `README.md:347` says every dependency is MIT, Apache-2.0 or BSD. The optional `bench` extra `matplotlib` has its own PSF-based licence | `README.md:347`; `crates/mincon-py/pyproject.toml:28` | Reword to "permissive" |
 
 Not IP, but found along the way (privacy): the result records in
-`bench/results` contain a Windows user name and laptop host name in 50+ files.
-The 0.1.0 wheels' SBOMs embed a developer's local paths. The 0.2.0 wheels were
+`bench/results` contain a Windows user name (50 files) and a laptop host name
+(227 files). Commits `c61bc0e` and `cbc82e8` describe scrubbing them, but
+`cbc82e8` changes no files. The 0.1.0 wheels' SBOMs embed a developer's local paths. The 0.2.0 wheels were
 built on CI runners and do not.
 
 ---
@@ -79,26 +83,42 @@ built on CI runners and do not.
 | Check | Location | Evidence | Risk |
 |---|---|---|---|
 | MathWorks file types (`.p`, `.mex*`, `.mat`, `.mlx`, `.mlapp`, `.slx`, `.mdl`, `.mltbx`, `.fig`) | whole tree | none. The only MATLAB files are 6 hand-written `.m` scripts and 208 generated `.m` models (§6) | none |
-| MathWorks headers and internal identifiers (`Copyright … The MathWorks`, `$Revision`, P-code header `v01.00v00.00`, `nlconst`, `qpsub`, `sqpLineSearch`, `optimlib`, `computeFinDiffGradAndJac`, `createExitMsg`, `toolbox/optim`, …) | all source, docs and scripts | 0 hits outside `bench/results`. The only hits are the MATLAB console logs in F-04 | none (code); low (F-04) |
-| Shared wording with the MathWorks pages (runs of 8+ consecutive words) | whole tree, excluding `bench/results` | 18 runs. The 5 at `docs/20_SQP_MATHEMATICS.md:71`, `:246`, `:247`, `:577`, `:580` are attributed quotations (F-06). The 2 at `docs/09_RESOURCES.md:40-41` and the 2 at `docs/20_SQP_MATHEMATICS.md:659`, `:661` are paper titles (Byrd–Hribar–Nocedal, Waltz et al., Powell) that MathWorks also cites. The rest are the public call signature (`fun, x0, A, b, Aeq, beq, lb, ub, nonlcon`) at `bench/parity/parity_matlab.m:37` and `bench/friction/friction_problems.m:4`, `:8`, or formulas: `bench/parity/parity_matlab.m:28`, `bench/friction/friction_problems.m:29`, Rosenbrock at `crates/mincon-py/tests/test_fmincon.py:289` and `crates/mincon-py/tests/test_batch.py:18`, `:23`, and `bench/corpus/hs.py:68` | none / low (F-06) |
+| MathWorks headers and internal identifiers (`Copyright … The MathWorks`, `$Revision`, P-code header `v01.00v00.00`, `nlconst`, `qpsub`, `sqpLineSearch`, `optimlib`, `computeFinDiffGradAndJac`, `createExitMsg`, `toolbox/optim`, …) | all source, docs and scripts | 0 hits outside `bench/results`. The only hits are the MATLAB console logs in F-05 | none (code); low (F-05) |
+| Shared wording with the MathWorks pages (runs of 8+ consecutive words) | whole tree, excluding `bench/results` | 18 runs. The 5 at `docs/20_SQP_MATHEMATICS.md:71`, `:246`, `:247`, `:577`, `:580` are attributed quotations (F-07). The 2 at `docs/09_RESOURCES.md:40-41` and the 2 at `docs/20_SQP_MATHEMATICS.md:659`, `:661` are paper titles (Byrd–Hribar–Nocedal, Waltz et al., Powell) that MathWorks also cites. The rest are the public call signature (`fun, x0, A, b, Aeq, beq, lb, ub, nonlcon`) at `bench/parity/parity_matlab.m:37` and `bench/friction/friction_problems.m:4`, `:8`, or formulas: `bench/parity/parity_matlab.m:28`, `bench/friction/friction_problems.m:29`, Rosenbrock at `crates/mincon-py/tests/test_fmincon.py:289` and `crates/mincon-py/tests/test_batch.py:18`, `:23`, and `bench/corpus/hs.py:68` | none / low (F-07) |
 | Hand-written MATLAB scripts | `bench/harness/worker_matlab.m`, `bench/matlab/fmincon_baseline.m`, `bench/parity/parity_matlab.m`, `bench/friction/friction_problems.m`, `bench/friction/run_friction_matlab.m`, `bench/corpus/equivalence_matlab.m` | original drivers; they call only the public `fmincon`/`optimoptions` API and documented `output`/`lambda` fields | none |
 | Generated MATLAB models | `bench/corpus/matlab/*.m` (208) | each starts `% NAME: generated by bench/corpus/generate.py from the SymPy definition. Do not edit.`, with no other comments. Regenerating from `git archive HEAD` reproduced 12 of 14 sampled files byte for byte; the other 2 differ only in float rounding | none |
-| Test problems taken from MathWorks examples | crates, `bench/corpus`, `bench/friction` | only `BADSTART_DISC` (F-11). HS71 is Hock–Schittkowski #71 and is not a MathWorks example. The chained Rosenbrock tests use the Moré–Garbow–Hillstrom start, not MathWorks' | low (F-11) |
-| MathWorks runtime text | `bench/results` records and logs | `fmincon` exit messages (F-05) and warning stack traces (F-04). These are program output captured by the harness | low |
+| Test problems taken from MathWorks examples | crates, `bench/corpus`, `bench/friction` | only `BADSTART_DISC` (F-12). HS71 is Hock–Schittkowski #71 and is not a MathWorks example. The chained Rosenbrock tests use the Moré–Garbow–Hillstrom start, not MathWorks' | low (F-12) |
+| MathWorks runtime text | `bench/results` records and logs | `fmincon` exit messages (F-06) and warning stack traces (F-05). These are program output captured by the harness | low |
 
 ### 1.2 Git history (76 commits)
 
+The history is linear, with no merges. It has 1,150 distinct paths and 1,515
+distinct blobs, and every blob was scanned, including the 11 over 5 MB. In
+every commit the author date equals the commit date, so nothing was re-dated.
+Two identities appear: `atciamb` for the first 9 commits and `e6ee497`, and
+Andrew Ciambella for the other 66. `3f48bac` was committed through the GitHub
+web UI.
+
 | Check | Location | Evidence | Risk |
 |---|---|---|---|
-| MathWorks file types ever committed | `git rev-list --all --objects` | none. No `.p`, `.mat`, `.mex*`, `.mlx`, `.slx` or `.mltbx` object in any commit | none |
-| Internal identifiers and MathWorks headers ever committed | pickaxe (`git log -S`/`-G`) and a grep of every blob | hits only in the three `bench/results` logs of F-04 (still present at HEAD) | low (F-04) |
-| Content later deleted | `8ec00bd` "Keep internal briefs and planning notes local" removed `AGENT_PROMPT.md`, `docs/00_MISSION.md`, `docs/01_FMINCON_ANATOMY.md` and `docs/10_ROADMAP.md` (969 lines) | `docs/01_FMINCON_ANATOMY.md` is a competitive analysis built from three cited MathWorks doc pages, Kronqvist et al. and IPOPT's docs. It shares only the call signature with MathWorks' text and describes no internals | low (F-12) |
-| Earlier wording in mincon's own messages | `616cd5e:crates/mincon-core/src/result.rs:68` | `"Local minimum found. First-order optimality and constraints satisfied."`, close to `fmincon`'s exit-flag-1 heading. Replaced in `e6c95ed` | low (history only) |
-| Baseline origin | `616cd5e` | "Record supplied mincon baseline". The crates arrive complete, with no earlier history | low (F-13) |
+| MathWorks file types ever committed | extension census of all 1,150 paths; magic bytes of all 1,515 blobs | 214 `.m` paths, all accounted for in §6. There are no `.p`, `.mex*`, `.mat`, `.mlx`, `.mlapp`, `.slx`, `.mdl`, `.mltbx`, `.fig`, `.prj` or `.asv` files, no P-code or MAT header, and no binary blob. The 48 non-UTF-8 blobs are CP-1252 text reports | none |
+| Generated models over time | 209 historical `bench/corpus/matlab/*.m` blobs (`6315a27`, `1c952c0`, `14ccf70`, `985bdbf`, `273ea7e`, `8ce240a`) | all 209 start with the generator header | none |
+| Hand-written `.m` over time | 10 blob versions of the 6 scripts in §6.1 | public API only (`optimoptions('fmincon', …)`, `fmincon(...)`, `version`, `ver('optim')`); the only pragma is the standard `%#ok<AGROW>` | none |
+| Internal identifiers and MathWorks headers | pickaxe (`git log -S`, `-G`, `-i`) and a content scan of every blob | 0 commits for `nlconst`, `qpsub`, `sqpLineSearch`, `optimlib`, `createExitMsg`, `edit fmincon`, `type fmincon`, `which fmincon`, `toolbox/optim`, `private/`, `pcode`, `P-code`, `dbstop`, "stepped through", "source of fmincon", `fmincon.m`, File Exchange / matlabcentral. The toolbox names in F-05 occur only in `8b3f431` and `c61bc0e`, which added the three logs. `Copyright` appears only as "mincon contributors" and in third-party crate licences | none (low for F-05) |
+| MathWorks licence or machine strings | every blob | only the MATLAB version (`25.2.0.3042426 (R2025b) Update 1`) and platform `PCWIN64`. No `ver` banner, licence number, host ID, "Licensed to", FlexNet or campus/student/home text | none |
+| Paths ever deleted | `git log --all --diff-filter=D` | only 5 of 1,150. Four were removed in `8ec00bd` "Keep internal briefs and planning notes local" (969 lines): `AGENT_PROMPT.md`, `docs/00_MISSION.md`, `docs/01_FMINCON_ANATOMY.md`, `docs/10_ROADMAP.md`. The fifth, `crates/mincon/examples/run_testset.rs`, was renamed in `a274507`. No MATLAB file or result record was ever deleted | none |
+| Deleted competitive notes | `616cd5e:docs/01_FMINCON_ANATOMY.md:85`; `2d0f833:docs/10_ROADMAP.md:23`; `616cd5e:README.md:56` | the anatomy doc paraphrases public MathWorks pages with sources (§Sources at `:286`). The roadmap has "M8 Beat `fmincon`" and the README table "Licence: proprietary". Comparative, with no MathWorks text beyond the call signature and one exit-flag phrase (`:131`) | low (F-13) |
+| MathWorks wording added and later removed | `mw_overlap` over 377 historical doc and code versions, diffed against HEAD | at 8 words only `616cd5e:docs/01_FMINCON_ANATOMY.md:17` (the call signature) is history-only; at 6 words only one exit-flag phrase from the same file | none |
+| Earlier wording in mincon's own messages | `616cd5e:crates/mincon-core/src/result.rs:68` | `"Local minimum found. First-order optimality and constraints satisfied."` Close to `fmincon`'s exit-flag-1 heading; replaced in `e6c95ed` | low (history only) |
+| Commit messages (972 lines) | `git log --all --format=%B` | `fmincon` and MATLAB appear only as benchmark figures, harness plumbing ("tagged fmincon solvers route to MATLAB"), the façade API ("MATLAB-style fmincon API") or public option names. None mentions reading, stepping through or editing `fmincon`, or any licence, trademark or affiliation | none |
+| `.gitignore` history | `616cd5e`, `e6c95ed`, `8ec00bd` | never ignores `*.p`, `*.mat`, `*.asv`, `slprj`, `*.mex*` or licence files, so nothing suggests local MathWorks artefacts were kept out | none |
+| Empty commits | `e6ee497` "Refresh repository contribution statistics"; `cbc82e8` "Scrub the local home directory…" | each tree is identical to its parent's | none |
+| Baseline origin | `616cd5e`; `616cd5e:AGENT_PROMPT.md:17` | "prior session built and verified: …"; later files call it "the scaffold" | **needs lawyer** (F-02) |
+| Disclaimer, ever | `git log --all -i -G 'trademark\|affiliat\|endorse'` | hits only third-party Apache-2.0 text in `5e0f136` | low (F-03) |
 
 ### 1.3 Published PyPI files
 
-All 7 files (0.1.0 built from `5e0f136`, 0.2.0 from `f69ff68`): no `.m`,
+All 7 files (0.1.0's content is identical to `5e0f136`, and its publication is recorded in `8b970bb`; 0.2.0 matches `f69ff68`): no `.m`,
 `.mat`, `.p` or `.mex` file, no `bench/` directory, no `fmincon` record. The
 sdists ship only `crates/` and the root manifests. `strings` on the 5 compiled
 extensions finds no MathWorks string. It finds only two `fmincon` notes, both
@@ -113,7 +133,7 @@ naming public options (`ScaleProblem`, `TypicalX`). Details are in §6.6.
 Every statement about `fmincon` in the code and docs was checked against the
 saved public pages. **None describes non-public behaviour.** The only
 non-public names in the repository are MATLAB's own stack traces captured in
-three logs (F-04). A grep for signs of reading the implementation ("in the
+three logs (F-05). A grep for signs of reading the implementation ("in the
 source", "line N of", `private/`, `edit fmincon`, `type fmincon`, p-code,
 debugger, "step through", "undocumented", `toolbox/`) found nothing.
 `docs/14_CAPABILITY_AND_DEFECT_INVENTORY.md:36` "Defects confirmed in the source" refers to mincon's own source.
@@ -196,7 +216,7 @@ EPL/LGPL code may be read and cited but never vendored, and it was followed.
 | SQP second-order correction | `crates/mincon-sqp/src/solver.rs:1811-1876` | Maratos 1978; Fletcher 1982; Mayne & Polak 1982 | `docs/20` §5.4 |
 | Adaptive QP step bound | `crates/mincon-sqp/src/solver.rs:1886-1902` | SNOPT major step limit (Gill, Murray & Saunders 2005); trust-region update (Nocedal & Wright Alg. 4.1) | `docs/20` §11.2 |
 | Goldfarb–Idnani dual active-set QP, Givens add/drop, equalities, infeasibility certificate | `crates/mincon-qp/src/lib.rs:265-616` | Goldfarb & Idnani 1983; Powell 1985 (dependence) | `docs/20` §2, §10 |
-| Sparse up-looking LDLᵀ, elimination tree, row reach, triangular solves | `crates/mincon-linalg/src/ldlt.rs` | Davis 2006; Liu 1990; QDLDL (Apache-2.0, see F-08) | `docs/04`; `docs/09` §2, §4 |
+| Sparse up-looking LDLᵀ, elimination tree, row reach, triangular solves | `crates/mincon-linalg/src/ldlt.rs` | Davis 2006; Liu 1990; QDLDL (Apache-2.0, see F-09) | `docs/04`; `docs/09` §2, §4 |
 | Quasi-definite factorization, inertia by Sylvester's law, growth guard, iterative refinement | `crates/mincon-linalg/src/ldlt.rs:91-144`, `:505-678` | Vanderbei 1995; Higham 2002 | `docs/04`; `docs/09` §2, §6 |
 | CSC storage and triplet compression | `crates/mincon-linalg/src/csc.rs`; `crates/mincon-core/src/sparsity.rs` | Davis 2006 ch. 2 | `docs/09` §2 |
 | Curtis–Powell–Reid column grouping; distance-1 and distance-2 colouring | `crates/mincon-diff/src/coloring.rs` | Curtis, Powell & Reid 1974; Coleman & Moré 1983, 1984 | `docs/09` §1; `docs/05` §3 |
@@ -243,22 +263,22 @@ own measured heuristic ("original"). All are **low** (F-14) or **none**.
 | Location | Use (≤ 1 line) | Risk |
 |---|---|---|
 | `README.md:3` | "A nonlinear constrained optimizer in Rust, aimed at what MATLAB's `fmincon` does well" | low (nominative) |
-| `README.md:17-20` and throughout (30 mentions of `fmincon`, 4 of MATLAB) | `from mincon import fmincon`; benchmark claims against `fmincon-sqp` and `fmincon-interior-point` | low (F-02, F-01) |
-| `crates/mincon/Cargo.toml:3` | "a free, fast, pip-installable answer to MATLAB's fmincon". Unchanged since `616cd5e`; shipped in every wheel's `dist-info/sboms/mincon-py.cyclonedx.json` and in both sdists | low (F-03) |
+| `README.md:17-20` and throughout (30 mentions of `fmincon`, 4 of MATLAB) | `from mincon import fmincon`; benchmark claims against `fmincon-sqp` and `fmincon-interior-point` | low (F-03, F-01) |
+| `crates/mincon/Cargo.toml:3` | "a free, fast, pip-installable answer to MATLAB's fmincon". Unchanged since `616cd5e`; shipped in every wheel's `dist-info/sboms/mincon-py.cyclonedx.json` and in both sdists | low (F-04) |
 | `crates/mincon-py/pyproject.toml:7` | PyPI Summary: "… with simple Python and MATLAB-style interfaces" (toned down in `5e0f136` from "A free answer to MATLAB's fmincon.") | low |
 | `crates/mincon-py/pyproject.toml:12` | PyPI keyword `fmincon` | low |
-| `crates/mincon-py/python/mincon/__init__.py:44`, `:949` | public function `fmincon(fun, x0, A, b, Aeq, beq, lb, ub, nonlcon, …)`; its docstring says it is "not MATLAB output-tuple compatibility" (`:997`) | low (interoperability; see F-02) |
+| `crates/mincon-py/python/mincon/__init__.py:44`, `:949` | public function `fmincon(fun, x0, A, b, Aeq, beq, lb, ub, nonlcon, …)`; its docstring says it is "not MATLAB output-tuple compatibility" (`:997`) | low (interoperability; see F-03) |
 | `crates/mincon-core/src/options.rs:613` | public `Options::fmincon_compatible()` | low |
 | `crates/mincon-py/README.md:8-9`, `:235` | "not a completed or proven superior replacement for MATLAB's `fmincon`"; "no MATLAB installation or license is required" | none (accurate, and signals independence) |
 | crate rustdoc (`crates/mincon-ip/src/lib.rs:3`, `crates/mincon-sqp/src/lib.rs:9-55`, `crates/mincon-diff/src/lib.rs:14`, `crates/mincon-testset/src/lib.rs:21`, …) | comparative references; the crates have no `publish = false`, so these would appear on docs.rs | low |
 | package name `mincon` | `fmincon` without the "f" | low (descriptive; a trademark search before wider publication would settle it) |
-| history: `docs/01_FMINCON_ANATOMY.md` | trademark in a historical file name | low (F-12) |
+| history: `docs/01_FMINCON_ANATOMY.md` | trademark in a historical file name | low (F-13) |
 
 **Disclaimer:** none exists. The search covered `affiliat`, `endorse`,
 `trademark`, `registered` and `®` across the tree, the history, the PyPI page
 and all 7 PyPI files; the only hits are Apache licence boilerplate. "MATLAB"
 is a registered trademark of The MathWorks, Inc. This audit did not check
-whether "fmincon" itself is registered. Suggested text is in F-02.
+whether "fmincon" itself is registered. Suggested text is in F-03.
 
 ---
 
@@ -268,7 +288,7 @@ whether "fmincon" itself is registered. Suggested text is in F-02.
 
 `MIT OR Apache-2.0` (`Cargo.toml:19`; `crates/mincon-py/pyproject.toml:9-10`).
 `LICENSE-MIT` is complete. `LICENSE-APACHE` (root and `crates/mincon-py/`) is
-the 17-line Apache boilerplate notice with a URL, not the licence text (F-08).
+the 17-line Apache boilerplate notice with a URL, not the licence text (F-09).
 The wheels ship both files, plus a full Apache-2.0 text inside
 `THIRD_PARTY_LICENSES.txt`.
 
@@ -285,7 +305,7 @@ licence file. All 33 agree. Lockfile checksums match crates.io.
 | BSD-2-Clause | numpy (rust-numpy) 0.29.0 | none (the notice is reproduced in the wheel) |
 | Apache-2.0 WITH LLVM-exception | target-lexicon 0.13.5 (build-time) | none |
 | (MIT OR Apache-2.0) AND Unicode-3.0 | unicode-ident 1.0.24 (build-time) | none |
-| MIT OR Apache-2.0 (toolchain) | Rust standard library, statically linked into the extension | low: not listed in `THIRD_PARTY_LICENSES.txt` (F-08) |
+| MIT OR Apache-2.0 (toolchain) | Rust standard library, statically linked into the extension | low: not listed in `THIRD_PARTY_LICENSES.txt` (F-09) |
 
 ### 5.3 Python dependencies
 
@@ -314,8 +334,8 @@ licence file. All 33 agree. Lockfile checksums match crates.io.
 | Structured families (CSTR, DISPATCH, CATENARY, EXPFIT, …) and torture problems | `bench/corpus/structured.py`, `heldout*.py`; `crates/mincon-testset/src/torture.rs` | Original, with seeded generated data | none |
 | S2MPJ / CUTEst problems | `bench/s2mpj_bridge.py:57-96` | Downloaded at run time into `~/.cache/s2mpj`; nothing is committed. S2MPJ is BSD-3-Clause (verified from its `LICENCE.txt`); CUTEst is BSD-3 | none |
 | Generated models, probes, targets, manifests | `bench/corpus/matlab/*.m`, `probes.json`, `matlab_probes.json`, `targets_v*.json`, `manifest.json`, `bench/friction/friction_data.json` | Project-generated | none |
-| Result records | `bench/results/**` | Project-generated, but produced with MATLAB (F-01) and containing MathWorks runtime text (F-04, F-05) | see F-01, F-04, F-05 |
-| QDLDL-derived code | `crates/mincon-linalg/src/ldlt.rs` | Apache-2.0; compatible, but the notice is not kept | low (F-08) |
+| Result records | `bench/results/**` | Project-generated, but produced with MATLAB (F-01) and containing MathWorks runtime text (F-05, F-06) | see F-01, F-05, F-06 |
+| QDLDL-derived code | `crates/mincon-linalg/src/ldlt.rs` | Apache-2.0; compatible, but the notice is not kept | low (F-09) |
 
 ---
 
@@ -366,10 +386,10 @@ There are 3,672 records whose `solver` starts with `fmincon`: interior-point
 
 Fields: `solver_version` ("MATLAB 2025b optim 25.2"), `host.matlab`
 ("25.2.0.3042426 (R2025b) Update 1"), options, x, multipliers, `native_status`
-(exitflag), `native_message` (F-05), iterations, function counts, first-order
+(exitflag), `native_message` (F-06), iterations, function counts, first-order
 optimality, constraint violation and timing. No licence number, host ID,
 activation or licence-type string appears. Three `.log` files hold MATLAB
-console output (F-04).
+console output (F-05).
 
 ### 6.5 Docs that report `fmincon` numbers
 
@@ -395,17 +415,33 @@ Third-party `fmincon` figures, quoted with attribution: Kronqvist et al.'s
 The PyPI project links to `github.com/atciamb/mincon`, and the 0.2.0 metadata
 has no Author field. Common to all 7 files: Summary "Experimental nonlinear constrained
 optimization in Rust with simple Python and MATLAB-style interfaces"; keyword
-`fmincon`; `License-Expression: MIT OR Apache-2.0`; no disclaimer.
+`fmincon`; `License-Expression: MIT OR Apache-2.0`; no disclaimer. Metadata of
+a published release cannot be edited on PyPI, so any fix to F-03 or F-04
+applies from the next release.
 
 | File | Built from | Contents | MATLAB material / records | Risk |
 |---|---|---|---|---|
-| `mincon-0.1.0-cp39-abi3-manylinux_2_17_x86_64….whl` | `5e0f136` | `mincon/{__init__.py, _mincon.abi3.so, THIRD_PARTY_LICENSES.txt}`, dist-info with both licences and a CycloneDX SBOM | none | low (F-02, F-03) |
-| `mincon-0.1.0-cp39-abi3-win_amd64.whl` | `5e0f136` | same, `_mincon.pyd` | none | low |
-| `mincon-0.1.0.tar.gz` | `5e0f136` | 58 entries: `crates/*` sources and root manifests | none; no `bench/` | low |
+| `mincon-0.1.0-cp39-abi3-manylinux_2_17_x86_64….whl` | `5e0f136` (published `8b970bb`) | `mincon/{__init__.py, _mincon.abi3.so, THIRD_PARTY_LICENSES.txt}`, dist-info with both licences and a CycloneDX SBOM | none | low (F-03, F-04) |
+| `mincon-0.1.0-cp39-abi3-win_amd64.whl` | `5e0f136` (published `8b970bb`) | same, `_mincon.pyd` | none | low |
+| `mincon-0.1.0.tar.gz` | `5e0f136` (published `8b970bb`) | 58 entries: `crates/*` sources and root manifests | none; no `bench/` | low |
 | `mincon-0.2.0-cp39-abi3-macosx_…universal2.whl` | `f69ff68` | same layout, universal2 `.so` | none | low |
 | `mincon-0.2.0-cp39-abi3-manylinux_2_17_x86_64….whl` | `f69ff68` | same | none | low |
 | `mincon-0.2.0-cp39-abi3-win_amd64.whl` | `f69ff68` | same | none | low |
 | `mincon-0.2.0.tar.gz` | `f69ff68` | 70 entries: `crates/*` sources and tests, root manifests. 66 are byte-identical to git; the rest are maturin rewrites | none; no `bench/` | low |
+
+### 6.7 When the MATLAB material entered history
+
+| Commit | Date | What it added |
+|---|---|---|
+| `616cd5e` | 09-05 | `bench/matlab/fmincon_baseline.m` (never run in history); `docs/01_FMINCON_ANATOMY.md`; published third-party `fmincon` figures (Kronqvist et al.) in the README and docs |
+| `5e0f136` | 09-07 | the `fmincon`-style Python façade and its README |
+| `e7c03e2` | 09-07 | `bench/parity/parity_matlab.m` and the **first real `fmincon` run** (`bench/parity/parity_matlab.json`) |
+| `6315a27` | 09-07 | the corpus generator, 133 generated models, `bench/harness/worker_matlab.m`, `bench/corpus/equivalence_matlab.m` and `bench/corpus/matlab_probes.json` |
+| `8b3f431` | 09-07 | the first `fmincon` result records (`bench/results/s2-dev`), including the two logs with stack traces (F-05) |
+| `c61bc0e` | 09-08 | `bench/results/s3-c1-dev`, including the third log (F-05) |
+| `9ee769a` … `7a4be10` | 09-07 to 09-18 | further result directories (111 `fmincon` output files in total, never modified after being added) and the docs listed in §6.5 |
+| `1c952c0`, `14ccf70`, `985bdbf`, `273ea7e`, `8ce240a` | 09-08 to 09-18 | further generated models (208 at HEAD) and updated MATLAB probe values |
+| `2eedd7e`, `b0453aa` | 09-12, 09-18 | the friction audit scripts `bench/friction/friction_problems.m` and `bench/friction/run_friction_matlab.m` |
 
 ---
 
@@ -440,7 +476,7 @@ Tools and checks:
 Limitations:
 - The history of the upstream repository `atciamb/mincon` beyond the 76
   commits present here was not audited.
-- The origin of the baseline code before `616cd5e` is not recorded (F-13).
+- How the baseline code in `616cd5e` was produced, and by whom, is not recorded beyond the deleted agent prompt (F-02).
 - Wächter–Biegler section numbers in §3 were checked against the repository
   docs, not re-read from the paper.
 - The MATLAB licence terms were not available (F-01).
